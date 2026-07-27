@@ -1,0 +1,11 @@
+services:
+  api:
+    build: .
+    # No container_name: Docker Compose derives it from the project folder,
+    # so cloning this starter into another folder renames it automatically.
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app

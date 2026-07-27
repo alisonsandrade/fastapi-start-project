@@ -1,0 +1,14 @@
+.venv
+__pycache__
+.pytest_cache
+.mypy_cache
+
+*.pyc
+*.pyo
+
+.git
+.gitignore
+
+permutare.db
+
+alembic/__pycache__
