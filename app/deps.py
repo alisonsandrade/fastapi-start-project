@@ -4,12 +4,13 @@ Aqui vivem os "guards" que protegem os endpoints:
 - get_current_user: extrai o user do JWT (endpoint protegido)
 - require_admin: garante que o user é ADMIN (endpoint só-admin)
 """
+from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from jose import JWTError
 from sqlalchemy.orm import Session
 
 from app.core.dependencies.database import get_db
@@ -25,18 +26,15 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)], 
+    token: Annotated[str, Depends(oauth2_scheme)],
     db: Annotated[Session, Depends(get_db)]
 ) -> UserModel:
     """Extrai o user do JWT.
-
     Args:
         token (str): Token JWT do header Authorization.
         db (Session): Sessão do banco de dados.
-
     Raises:
         HTTPException: Se o token for inválido ou o user não for encontrado.
-
     Returns:
         UserModel: User autenticado.
     """
@@ -58,13 +56,16 @@ def get_current_user(
 
         if session is None:
             raise credenciais_exc
-        if not session.is_active:
+        if session.revoked_at is not None:
             raise credenciais_exc
+        if session.expires_at is not None and session.expires_at < datetime.now(timezone.utc):
+            raise credenciais_exc
+
     except JWTError:
         raise credenciais_exc
 
     try:
-        user = get_user_by_id(db, user_id)
+        user = get_user_by_id(db, str(user_id))
     except UserNotFoundError:
         raise credenciais_exc
 
@@ -81,22 +82,31 @@ def require_admin(
     current_user: Annotated[UserModel, Depends(get_current_user)]
 ) -> UserModel:
     """Garante que o user é ADMIN.
-
     Args:
         current_user (UserModel): User autenticado.
-
     Raises:
         HTTPException: Se o user não for ADMIN.
-
     Returns:
         UserModel: User autenticado.
     """
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role.name != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Usuário não tem permissão de administrador",
         )
     return current_user
+
+
+def require_permission(permission_code: str):
+    """Factory: cria uma dependência que exige a permissão."""
+    def checker(current_user: UserModel = Depends(get_current_user)) -> UserModel:
+        if not current_user.has_permission(permission_code):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Missing required permission: {permission_code}",
+            )
+        return current_user
+    return checker
 
 
 # Tipos "prontos para usar" — evitam repetir Annotated[...] em cada endpoint
