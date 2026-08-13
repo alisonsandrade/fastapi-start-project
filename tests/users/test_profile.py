@@ -20,6 +20,12 @@ def test_get_me_unauthorized(client):
 
     assert response.status_code == 401
 
+def test_me_returns_own_data(client, auth_headers, registered_user):
+    """GET /users/me retorna os dados do próprio usuário logado."""
+    r = client.get(f"{API_PREFIX}/users/me", headers=auth_headers)
+    assert r.status_code == 200
+    assert r.json()["email"] == registered_user["email"]
+    assert r.json()["role"] == "member"
 
 def test_update_profile_name(client, auth_headers):
     """The user can update their display name."""

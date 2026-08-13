@@ -1,12 +1,16 @@
 """SQLAlchemy model for User (identity and authentication)."""
 
 from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.rbac.models import RoleModel
 
 
 class UserRole:
@@ -50,10 +54,11 @@ class UserModel(Base):
         nullable=False,
     )
 
-    role: Mapped[str] = mapped_column(
-        String(20),
+    role_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("roles.id", ondelete="RESTRICT"),
         nullable=False,
-        default=UserRole.MEMBER,
+        index=True,
     )
 
     phone: Mapped[str | None] = mapped_column(
@@ -94,3 +99,16 @@ class UserModel(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+
+    role: Mapped["RoleModel"] = relationship(lazy="joined")
+
+    @property
+    def role_name(self) -> str:
+        return self.role.name
+
+    def has_permission(self, code: str) -> bool:
+        """True se o role do usuário possui a permissão 'code'"""
+        return any(
+            rp.permission.code == code
+            for rp in self.role.permissions
+        )

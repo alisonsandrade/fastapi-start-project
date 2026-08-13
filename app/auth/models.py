@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from sqlalchemy import (
     Boolean,
@@ -18,25 +18,48 @@ class UserSessionModel(Base):
 
     __tablename__ = "user_sessions"
 
-    id: Mapped[UUID] = mapped_column(
-        String(36), 
-        primary_key=True, 
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
         default=lambda: str(uuid4())
     )
-    user_id: Mapped[UUID] = mapped_column(
-        String(36), 
+
+    user_id: Mapped[str] = mapped_column(
+        String(36),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    ip_address: Mapped[str | None] = mapped_column(
+        String(45),
+        nullable=True
+    )
+
+    user_agent: Mapped[str | None] = mapped_column(
+        String(400),
+        nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
+
+    last_used_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
     expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), 
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
         nullable=True,
     )
 
@@ -46,26 +69,26 @@ class RefreshTokenModel(Base):
 
     __tablename__ = "refresh_tokens"
 
-    id: Mapped[UUID] = mapped_column(
-        String(36), 
-        primary_key=True, 
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
         default=lambda: str(uuid4())
     )
-    user_session_id: Mapped[UUID] = mapped_column(
-        String(36), 
+    user_session_id: Mapped[str] = mapped_column(
+        String(36),
         ForeignKey("user_sessions.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     token_hash: Mapped[str] = mapped_column(
-        String(64), 
-        nullable=False, 
+        String(64),
+        nullable=False,
         unique=True,
         index=True,
     )
     is_revoked: Mapped[bool] = mapped_column(
-        Boolean, 
-        nullable=False, 
+        Boolean,
+        nullable=False,
         default=False
     )
     created_at: Mapped[datetime] = mapped_column(
@@ -74,7 +97,7 @@ class RefreshTokenModel(Base):
         default=lambda: datetime.now(timezone.utc),
     )
     expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), 
+        DateTime(timezone=True),
         nullable=True,
     )
 

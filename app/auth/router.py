@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Request, status
 
 from typing import Annotated
 
@@ -6,12 +6,6 @@ from sqlalchemy.orm import Session
 
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.auth.exceptions import (
-    InvalidCredentialsError,
-    InactiveUserError,
-    InvalidRefreshTokenError,
-    InvalidSessionError,
-)
 from app.core.dependencies.database import get_db
 
 from app.auth import service
@@ -19,7 +13,7 @@ from app.auth import service
 from app.auth.deps import CurrentSessionId
 
 from app.auth.schemas import (
-    TokenResponseSchema, 
+    TokenResponseSchema,
     RefreshTokenRequestSchema,
     ForgotPasswordSchema,
     ResetPasswordSchema,
@@ -35,16 +29,22 @@ router = APIRouter(tags=["Autenticação"])
     summary="Autentica e retorna um JWT",
 )
 def login(
+    request: Request,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Annotated[Session, Depends(get_db)],
 ):
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+
     tokens = service.authenticate_user(
-        db, 
+        db,
         email=str(form_data.username).lower(),
         password=form_data.password,
+        ip_address=ip,
+        user_agent=ua,
     )
     return TokenResponseSchema(
-        access_token=tokens["access_token"], 
+        access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
         token_type=tokens.get("token_type", "bearer")
     )

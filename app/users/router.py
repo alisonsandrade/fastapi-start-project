@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.deps import CurrentUser
+from app.deps import CurrentUser, require_permission
 from app.core.dependencies.database import get_db
 from app.users import service
 from app.users.exceptions import PasswordReuseError
@@ -15,6 +15,9 @@ from app.users.schemas import (
     UserProfileUpdateSchema,
     ChangePasswordSchema,
 )
+
+from app.rbac.permissions import Permissions
+
 
 router = APIRouter(
     tags=["User Registration"],
@@ -36,7 +39,7 @@ def register(
         name=payload.name,
         email=str(payload.email).lower(),
         password=payload.password,
-        role=UserRole.MEMBER,
+        role_name=UserRole.MEMBER,
         phone=payload.phone,
         avatar_url=payload.avatar_url,
         job_title=payload.job_title,
@@ -108,7 +111,7 @@ def delete_my_account(
     db: Annotated[Session, Depends(get_db)]
 ):
     return service.soft_delete_user(
-        db=db, 
+        db=db,
         user=current_user,
         actor_id=str(current_user.id),
     )

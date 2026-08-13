@@ -12,6 +12,10 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+
+from app.rbac.seed import get_role_by_name
+from app.rbac.models import RoleModel
+
 from app.users.exceptions import (
     EmailAlreadyExistsError,
     WeakPasswordError,
@@ -22,7 +26,7 @@ from app.auth.exceptions import InvalidCredentialsError
 from app.users.models import UserModel, UserRole
 
 from app.audit.constants import (
-    USER_CREATED, 
+    USER_CREATED,
     PROFILE_UPDATED,
     PASSWORD_CHANGED,
     USER_SOFT_DELETED,
@@ -86,7 +90,7 @@ def create_user(
     name: str,
     email: str,
     password: str,
-    role: str = UserRole.MEMBER,
+    role_name: str = "member",
     phone: str | None = None,
     avatar_url: str | None = None,
     job_title: str | None = None,
@@ -109,11 +113,15 @@ def create_user(
             f"Email '{normalized_email}' is already registered."
         )
 
+    role = get_role_by_name(db, role_name)
+    if role is None:
+        raise ValueError(f"Role '{role_name}' not found. Run the RBAC seed first.")
+
     new_user = UserModel(
         name=name.strip(),
         email=normalized_email,
         password_hash=hash_password(password),
-        role=role,
+        role_id=role.id,
         phone=phone,
         avatar_url=avatar_url,
         job_title=job_title,
@@ -128,7 +136,7 @@ def create_user(
     db.refresh(new_user)
 
     create_audit_log(
-        db=db, 
+        db=db,
         action=USER_CREATED,
         resource="User",
         actor_id=str(new_user.id),
@@ -144,7 +152,7 @@ def create_user(
 
 def get_user_by_id(
     db: Session,
-    user_id: UUID,
+    user_id: str,
 ) -> UserModel:
     """Get user by id."""
 
@@ -165,7 +173,7 @@ def get_user_by_id(
 def list_users(
     db: Session,
     *,
-    role: UserRole | None = None,
+    role: str | None = None,
     active_only: bool | None = True,
     skip: int = 0,
     limit: int = 50,
@@ -185,12 +193,11 @@ def list_users(
         )
 
     if role:
-        stmt = stmt.where(
-            UserModel.role == role.lower()
+        stmt = stmt.join(RoleModel).where(
+            func.lower(RoleModel.name) == role.lower()
         )
-
-        count_stmt = count_stmt.where(
-            UserModel.role == role.lower()
+        count_stmt = count_stmt.join(RoleModel).where(
+            func.lower(RoleModel.name) == role.lower()
         )
 
     stmt = stmt.order_by(
@@ -224,7 +231,7 @@ def update_current_user(
     """Update current user's frofile"""
 
     if name is not None:
-        user.name = name.strip()    
+        user.name = name.strip()
 
     if phone is not None:
         user.phone = phone
@@ -236,7 +243,7 @@ def update_current_user(
         user.job_title = job_title
 
     if bio is not None:
-        user.bio = bio  
+        user.bio = bio
 
     user.updated_at = datetime.now(timezone.utc)
 
@@ -311,7 +318,7 @@ def soft_delete_user(
 ):
     user.is_active = False
     user.updated_at = datetime.now(timezone.utc)
-    
+
     db.commit()
     db.refresh(user)
 
@@ -339,11 +346,11 @@ def update_user_by_admin(
     *,
     name: str | None = None,
     email: str | None = None,
-    role: UserRole | None = None,
+    role_name: str | None = None,
     is_active: bool | None = None,
 ) -> UserModel:
     """Update a user by administrator."""
-    
+
     user = get_user_by_id(
         db,
         user_id,
@@ -369,9 +376,12 @@ def update_user_by_admin(
                 )
 
             user.email = normalized_email
+    if role_name is not None:
+        role = get_role_by_name(db, role_name)
+        if role is None:
+            raise ValueError(f"Role '{role_name}' not found.")
+        user.role_id = role.id
 
-    if role is not None:
-        user.role = role
 
     if is_active is not None:
         user.is_active = is_active

@@ -2,8 +2,8 @@ from datetime import datetime, timezone, timedelta
 import hashlib
 import secrets
 
-from sqlalchemy import UUID, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, session
 
 from app.auth.exceptions import (
     InvalidRefreshTokenError,
@@ -13,6 +13,7 @@ from app.auth.exceptions import (
     PasswordResetTokenError,
 )
 
+from app.core.helpers.datetime import as_aware_utc
 from app.users.exceptions import (
     PasswordReuseError,
 )
@@ -121,7 +122,7 @@ def build_access_token_claims(
     """Build access token claims."""
 
     return {
-        "role": user.role,
+        "role": user.role.name,
         "email": user.email,
         "session_id": str(session.id),
     }
@@ -134,11 +135,15 @@ def build_access_token_claims(
 def create_session(
     db: Session,
     user_id: str,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
 ) -> UserSessionModel:
     """Create a new user session."""
 
     new_session = UserSessionModel(
         user_id=user_id,
+        ip_address=ip_address,
+        user_agent=user_agent,
     )
 
     db.add(new_session)
@@ -153,12 +158,12 @@ def get_session(
     session_id: str,
 ) -> UserSessionModel | None:
     """Get user session by id."""
-
-    return db.get(
-        UserSessionModel,
-        session_id,
-    )
-
+    return db.execute(
+        select(UserSessionModel).where(
+            UserSessionModel.id == session_id,
+            UserSessionModel.revoked_at.is_(None),
+        )
+    ).scalar_one_or_none()
 
 def terminate_session(
     db: Session,
@@ -176,7 +181,7 @@ def terminate_session(
             "Session not found."
         )
 
-    session.is_active = False
+    session.revoked_at = datetime.now(timezone.utc)
 
     stmt = select(
         RefreshTokenModel
@@ -228,7 +233,7 @@ def create_refresh_token(
     refresh_token_record = RefreshTokenModel(
         user_session_id=user_session_id,
         token_hash=token_hash,
-        expires_at=datetime.now() + timedelta(days=30),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
     )
 
     db.add(refresh_token_record)
@@ -277,6 +282,8 @@ def authenticate_user(
     db: Session,
     email: str,
     password: str,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
 ) -> dict:
     """Validate credentials and create session/tokens."""
 
@@ -302,8 +309,10 @@ def authenticate_user(
         )
 
     session = create_session(
-        db=db,
-        user_id=str(user.id),
+        db,
+        str(user.id),
+        ip_address=ip_address,
+        user_agent=user_agent
     )
 
     access_token = create_access_token(
@@ -366,9 +375,9 @@ def refresh_session(
             "Refresh token revoked."
         )
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
 
-    if refresh_token_record.expires_at < now:
+    if as_aware_utc(refresh_token_record.expires_at) < now:
         raise InvalidRefreshTokenError(
             "Refresh token expired."
         )
@@ -381,7 +390,7 @@ def refresh_session(
     if session is None:
         raise InvalidSessionError()
 
-    if not session.is_active:
+    if session.revoked_at:
         raise InvalidSessionError()
 
     user = get_user_by_id(
@@ -402,6 +411,8 @@ def refresh_session(
         token_hash=new_refresh_hash,
         expires_at=now + timedelta(days=30),
     )
+
+    session.last_used_at = datetime.now(timezone.utc)
 
     db.add(new_refresh_token_record)
 
@@ -508,7 +519,7 @@ def reset_password(
             "Password reset token already used."
         )
 
-    if reset_record.expires_at < datetime.utcnow():
+    if as_aware_utc(reset_record.expires_at) < datetime.now(timezone.utc):
         raise PasswordResetTokenError(
             "Password reset token expired."
         )

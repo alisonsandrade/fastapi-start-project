@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class UserRoleSchema(str, Enum):
@@ -92,6 +92,24 @@ class UserAdminCreateSchema(BaseModel):
     )
 
     role: UserRoleSchema = UserRoleSchema.MEMBER
+
+    phone: str | None = None
+
+    avatar_url: str | None = Field(
+        default=None,
+        max_length=500,
+    )
+
+    job_title: str | None = Field(
+        default=None,
+        max_length=150,
+    )
+
+    bio: str | None = Field(
+        default=None,
+        max_length=1000,
+    )
+
 
 
 class UserAdminUpdateSchema(BaseModel):
@@ -182,7 +200,7 @@ class UserResponseSchema(BaseModel):
     id: UUID
     name: str
     email: EmailStr
-    role: UserRoleSchema
+    role: str = Field(validation_alias="role_name")
     phone: str | None = None
     avatar_url: str | None = None
     job_title: str | None = None

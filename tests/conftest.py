@@ -12,18 +12,15 @@ from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.core.database import Base
 from app.core.dependencies.database import get_db
+from app.rbac.seed import seed_rbac
 from app.users import service as user_service
-from app.users.models import UserRole
 
 
 # ---------------------------------------------------------------------------
 # Test database configuration
 # ---------------------------------------------------------------------------
-# We use a dedicated SQLite database file so we never touch the real one.
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
-# All routes are mounted under this prefix (see main.py). Centralizing it here
-# means that if you ever bump the API version you only change ONE line.
 API_PREFIX = "/api/v1"
 
 engine = create_engine(
@@ -71,13 +68,16 @@ def override_get_db():
 # ---------------------------------------------------------------------------
 @pytest.fixture(scope="function")
 def client():
-    """Return a TestClient with a fresh database for each test.
-
-    Before every test we drop and recreate all tables, guaranteeing perfect
-    isolation between tests (no data leaks from one test to another).
-    """
+    """Return a TestClient with a fresh, RBAC-seeded database for each test."""
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+
+    # Seed built-in roles/permissions (else create_user can't resolve the role).
+    _seed_db = TestingSessionLocal()
+    try:
+        seed_rbac(_seed_db)
+    finally:
+        _seed_db.close()
 
     app.dependency_overrides[get_db] = override_get_db
 
@@ -113,11 +113,7 @@ def auth_headers(client, registered_user):
 
 @pytest.fixture
 def admin_user(client):
-    """Create an ADMIN user directly through the service layer.
-
-    The public /auth/register endpoint always creates MEMBER users, so the
-    only way to get an ADMIN in the tests is to call the service directly.
-    """
+    """Create an ADMIN user directly through the service layer."""
     db = TestingSessionLocal()
     try:
         user_service.create_user(
@@ -125,7 +121,7 @@ def admin_user(client):
             name=TEST_ADMIN["name"],
             email=TEST_ADMIN["email"],
             password=TEST_ADMIN["password"],
-            role=UserRole.ADMIN,
+            role_name="admin",
         )
     finally:
         db.close()
