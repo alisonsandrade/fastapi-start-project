@@ -52,8 +52,8 @@ Usa um banco SQLite dedicado (`test.db`), então o banco de desenvolvimento
 | Fixture          | O que faz                                                        |
 |------------------|------------------------------------------------------------------|
 | `client`         | TestClient com banco limpo por teste                             |
-| `registered_user`| Registra o usuário padrão (MEMBER) e devolve suas credenciais    |
-| `auth_headers`   | Faz login como MEMBER e devolve o header `Authorization`         |
+| `registered_user`| Registra o usuário padrão (user) e devolve suas credenciais    |
+| `auth_headers`   | Faz login como user e devolve o header `Authorization`         |
 | `admin_user`     | Cria um ADMIN direto pela camada de serviço                      |
 | `admin_headers`  | Faz login como ADMIN e devolve o header `Authorization`          |
 

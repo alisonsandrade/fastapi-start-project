@@ -10,8 +10,8 @@ from tests.conftest import API_PREFIX
 # ---------------------------------------------------------------------------
 # Authorization
 # ---------------------------------------------------------------------------
-def test_admin_route_forbidden_for_member(client, auth_headers):
-    """A regular MEMBER cannot access admin routes (403)."""
+def test_admin_route_forbidden_for_user(client, auth_headers):
+    """A regular user cannot access admin routes (403)."""
     response = client.get(
         f"{API_PREFIX}/admin/users/",
         headers=auth_headers,
@@ -38,7 +38,7 @@ def test_admin_create_user(client, admin_headers):
             "name": "Created By Admin",
             "email": "created@example.com",
             "password": "StrongPassword123!",
-            "role": "member",
+            "role": "user",
         },
         headers=admin_headers,
     )

@@ -26,7 +26,7 @@ class PermissionModel(Base):
 
 
 class RoleModel(Base):
-    """Um papel que agrupa permissões (ex.: admin, member)"""
+    """Um papel que agrupa permissões (ex.: admin, user)"""
     __tablename__ = "roles"
 
     id: Mapped[str] = mapped_column(

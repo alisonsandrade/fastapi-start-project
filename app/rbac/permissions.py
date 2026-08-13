@@ -1,6 +1,6 @@
 """Central registry of all permissions (source of truth in code)."""
 class Permissions:
-    #Users
+    """Permissions de Users"""
     USERS_CREATE = "users.create"
     USERS_READ = "users.read"
     USERS_UPDATE = "users.update"
@@ -21,7 +21,7 @@ BUILTIN_ROLES: dict[str, dict] = {
         "description": "Administrador do sistema (acesso total)",
         "permissions": "*",
     },
-    "member": {
+    "user": {
         "description": "Usuário comum",
         "permissions": [],
     }

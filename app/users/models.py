@@ -17,13 +17,13 @@ class UserRole:
     """User role constants."""
 
     ADMIN = "admin"
-    MEMBER = "member"
+    USER = "user"
 
     @classmethod
     def values(cls) -> list:
         return [
             cls.ADMIN,
-            cls.MEMBER,
+            cls.USER,
         ]
 
 

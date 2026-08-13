@@ -12,7 +12,7 @@ def test_seed_creates_builtin_roles(client):
     db = TestingSessionLocal()
     try:
         assert get_role_by_name(db, "admin") is not None
-        assert get_role_by_name(db, "member") is not None
+        assert get_role_by_name(db, "user") is not None
     finally:
         db.close()
 
@@ -28,20 +28,20 @@ def test_admin_has_users_list_permission(client, admin_user):
         db.close()
 
 
-def test_member_lacks_users_list_permission(client, registered_user):
+def test_user_lacks_users_list_permission(client, registered_user):
     db = TestingSessionLocal()
     try:
-        member = db.execute(
+        user = db.execute(
             select(UserModel).where(UserModel.email == registered_user["email"])
         ).scalar_one()
-        assert member.has_permission("users.list") is False
+        assert user.has_permission("users.list") is False
     finally:
         db.close()
 
 
 # --- The guard in action (would have caught the dependencies bug) --------
 
-def test_member_forbidden_on_admin_list(client, auth_headers):
+def test_user_forbidden_on_admin_list(client, auth_headers):
     response = client.get(f"{API_PREFIX}/admin/users/", headers=auth_headers)
     assert response.status_code == 403
 

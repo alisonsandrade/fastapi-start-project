@@ -68,11 +68,11 @@ logic.
 - **Password recovery flow** (`forgot-password` / `reset-password`) with single-use, expiring tokens
 
 ### 👤 User Management
-- Public **registration** (always creates `MEMBER` role)
+- Public **registration** (always creates `user` role)
 - **Profile** read & update (`name`, `phone`, `avatar_url`, `job_title`, `bio`)
 - **Password change** with current-password verification and reuse prevention
 - **Soft delete** (deactivate) and **hard delete** (permanent) of accounts
-- **Role-based access control** (`ADMIN` / `MEMBER`)
+- **Role-based access control** (`ADMIN` / `user`)
 
 ### 🛡️ Admin
 - Create users with any role
@@ -320,7 +320,7 @@ alembic current
 
 ## 🌱 Creating the first admin
 
-Public registration always creates `MEMBER` users. The very first `ADMIN` is
+Public registration always creates `user` users. The very first `ADMIN` is
 created via a seed script (solves the classic *bootstrap problem*):
 
 ```bash
@@ -340,7 +340,7 @@ All routes are prefixed with **`/api/v1`**.
 
 | Method | Endpoint                    | Auth | Description                              |
 |--------|-----------------------------|------|------------------------------------------|
-| `POST` | `/auth/register`            | ❌   | Register a new user (role = MEMBER)      |
+| `POST` | `/auth/register`            | ❌   | Register a new user (role = user)      |
 | `POST` | `/auth/login`               | ❌   | Authenticate → access + refresh tokens   |
 | `POST` | `/auth/refresh`             | ❌   | Rotate refresh token → new token pair    |
 | `POST` | `/auth/logout`              | ✅   | Terminate the current session            |
@@ -464,7 +464,7 @@ cp .env.example .env             # then personalize APP_NAME, DATABASE_URL, SECR
 1. Edit `.env` → set your `APP_NAME`, `DATABASE_URL`, `SECRET_KEY`.
 2. `alembic upgrade head`
 3. `python -m scripts.seed_admin`
-4. Start adding your **domain modules** under `app/` (e.g. `members/`,
+4. Start adding your **domain modules** under `app/` (e.g. `users/`,
    `products/`, `orders/`), following the same pattern:
    `models → schemas → service → router → exceptions`.
 

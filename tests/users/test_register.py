@@ -4,7 +4,7 @@ from tests.conftest import API_PREFIX, TEST_USER
 
 
 def test_register_user_success(client):
-    """A valid payload creates a new MEMBER user (201)."""
+    """A valid payload creates a new user user (201)."""
     response = client.post(
         f"{API_PREFIX}/auth/register",
         json=TEST_USER,
@@ -14,7 +14,7 @@ def test_register_user_success(client):
 
     data = response.json()
     assert data["email"] == TEST_USER["email"]
-    assert data["role"] == "member"
+    assert data["role"] == "user"
     assert data["is_active"] is True
 
 

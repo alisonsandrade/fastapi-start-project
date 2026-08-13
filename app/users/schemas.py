@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 class UserRoleSchema(str, Enum):
     ADMIN = "admin"
-    MEMBER = "member"
+    USER = "user"
 
 
 # ============================================================================
@@ -91,7 +91,7 @@ class UserAdminCreateSchema(BaseModel):
         max_length=255,
     )
 
-    role: UserRoleSchema = UserRoleSchema.MEMBER
+    role: UserRoleSchema = UserRoleSchema.USER
 
     phone: str | None = None
 
@@ -218,7 +218,7 @@ class UserResponseSchema(BaseModel):
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "name": "John Doe",
                 "email": "john.doe@company.com",
-                "role": "member",
+                "role": "user",
                 "is_active": True,
                 "created_at": "2025-01-01T00:00:00Z",
                 "updated_at": None,

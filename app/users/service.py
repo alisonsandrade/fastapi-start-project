@@ -90,7 +90,7 @@ def create_user(
     name: str,
     email: str,
     password: str,
-    role_name: str = "member",
+    role_name: str = "user",
     phone: str | None = None,
     avatar_url: str | None = None,
     job_title: str | None = None,

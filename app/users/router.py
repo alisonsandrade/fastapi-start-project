@@ -16,8 +16,6 @@ from app.users.schemas import (
     ChangePasswordSchema,
 )
 
-from app.rbac.permissions import Permissions
-
 
 router = APIRouter(
     tags=["User Registration"],
@@ -39,7 +37,7 @@ def register(
         name=payload.name,
         email=str(payload.email).lower(),
         password=payload.password,
-        role_name=UserRole.MEMBER,
+        role_name=UserRole.USER,
         phone=payload.phone,
         avatar_url=payload.avatar_url,
         job_title=payload.job_title,
