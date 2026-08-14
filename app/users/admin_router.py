@@ -7,7 +7,12 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies.database import get_db
 from app.deps import CurrentAdmin, require_permission
+
+from app.rbac.exceptions import RoleNotFoundError
 from app.rbac.permissions import Permissions
+from app.rbac.schemas import UserRoleUpdateSchema
+from app.rbac import service as service_rbac
+
 from app.users import service
 from app.users.exceptions import (
     EmailAlreadyExistsError,
@@ -18,6 +23,7 @@ from app.users.schemas import (
     UserAdminCreateSchema,
     UserAdminUpdateSchema,
     UserListResponseSchema,
+    UserRBACSchema,
     UserResponseSchema,
 )
 
@@ -111,7 +117,23 @@ def list_users(
         skip=skip,
         limit=limit,
         items=[
-            UserResponseSchema.model_validate(item)
+            UserResponseSchema.model_validate({
+                "id": item.id,
+                "name": item.name,
+                "email": item.email,
+                "phone": item.phone,
+                "avatar_url": item.avatar_url,
+                "job_title": item.job_title,
+                "bio": item.bio,
+                "is_active": item.is_active,
+                "role": item.role.name,
+                "permissions": [
+                    rp.permission.code
+                    for rp in item.role.permissions
+                ],
+                "created_at": item.created_at,
+                "updated_at": item.updated_at,
+            })
             for item in items
         ],
     )
@@ -189,7 +211,7 @@ def soft_delete_user_by_admin(
     summary="Hard delete user (ADMIN)",
 )
 def hard_delete_user_by_admin(
-    user_id: UUID,
+    user_id: str,
     db: Annotated[Session, Depends(get_db)],
     admin: CurrentAdmin,
 ):
@@ -206,3 +228,76 @@ def hard_delete_user_by_admin(
         user=user,
         actor_id=str(admin.id),
     )
+
+"------------------------------------------------------------------------------"
+"                                   RBAC                                       "
+"------------------------------------------------------------------------------"
+
+
+@router.get(
+    "/{user_id}/rbac",
+    dependencies=[Depends(
+        require_permission(Permissions.ROLES_MANAGE)
+    )],
+    response_model=UserRBACSchema,
+    summary="Get user role and permissions"
+)
+def get_user_rbac(
+    user_id: str,
+    db: Annotated[Session, Depends(get_db)],
+) -> UserRBACSchema:
+    try:
+        user = service.get_user_rbac(db, user_id)
+    except UserNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        )
+
+    return UserRBACSchema(
+        user_id=str(user.id),
+        user_name=user.name,
+        role_id=str(user.role.id),
+        role_name=user.role.name,
+        permissions=[
+            rp.permission.code
+            for rp in user.role.permissions
+        ],
+    )
+
+
+@router.patch(
+    "/{user_id}/roles",
+    dependencies=[
+        Depends(
+            require_permission(
+                Permissions.ROLES_USERS
+            )
+        )
+    ],
+    response_model=UserResponseSchema,
+    summary="Change user role",
+)
+def change_user_role(
+    user_id: UUID,
+    payload: UserRoleUpdateSchema,
+    db: Annotated[Session, Depends(get_db)],
+):
+    try:
+        user = service_rbac.change_user_role(
+            db=db,
+            user_id=str(user_id),
+            role_id=payload.role_id,
+        )
+    except UserNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        )
+    except RoleNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        )
+
+    return user

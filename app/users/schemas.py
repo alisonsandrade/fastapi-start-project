@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserRoleSchema(str, Enum):
@@ -194,18 +194,20 @@ class ChangePasswordSchema(BaseModel):
 # RESPONSES
 # ============================================================================
 
+
 class UserResponseSchema(BaseModel):
     """Schema for user responses."""
 
     id: UUID
     name: str
     email: EmailStr
-    role: str = Field(validation_alias="role_name")
     phone: str | None = None
     avatar_url: str | None = None
     job_title: str | None = None
     bio: str | None = None
     is_active: bool
+    role: str = Field(validation_alias="role_name")
+    permissions: list[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime | None = None
 
@@ -218,8 +220,9 @@ class UserResponseSchema(BaseModel):
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "name": "John Doe",
                 "email": "john.doe@company.com",
-                "role": "user",
                 "is_active": True,
+                "role": "user",
+                "permissions": [],
                 "created_at": "2025-01-01T00:00:00Z",
                 "updated_at": None,
             }
@@ -229,8 +232,17 @@ class UserResponseSchema(BaseModel):
 
 class UserListResponseSchema(BaseModel):
     """Schema for paginated user lists."""
-
     items: list[UserResponseSchema]
     total: int
     skip: int
     limit: int
+
+
+class UserRBACSchema(BaseModel):
+    user_id: str
+    user_name: str
+
+    role_id: str
+    role_name: str
+
+    permissions: list[str]

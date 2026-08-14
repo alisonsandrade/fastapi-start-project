@@ -23,7 +23,7 @@ from app.users.exceptions import (
     PasswordReuseError,
 )
 from app.auth.exceptions import InvalidCredentialsError
-from app.users.models import UserModel, UserRole
+from app.users.models import UserModel
 
 from app.audit.constants import (
     USER_CREATED,
@@ -339,6 +339,11 @@ def soft_delete_user(
 # ============================================================================
 # USER OPERATIONS FOR ADMIN
 # ============================================================================
+
+
+def get_user_rbac(db: Session, user_id: str) -> UserModel:
+    return get_user_by_id(db, user_id)
+
 
 def update_user_by_admin(
     db: Session,
