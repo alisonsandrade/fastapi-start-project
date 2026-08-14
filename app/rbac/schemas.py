@@ -55,3 +55,7 @@ class PermissionResponseSchema(BaseModel):
     description: str | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserRoleUpdateSchema(BaseModel):
+    role_id: str

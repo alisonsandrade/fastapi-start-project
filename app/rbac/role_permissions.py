@@ -12,7 +12,7 @@ def list_role_permissions(db: Session, role_id: str) -> list:
     return role.permission_items
 
 
-def get_permissions_by_id(db: Session, permission_id: str) -> PermissionModel:
+def get_permission_by_id(db: Session, permission_id: str) -> PermissionModel:
     permission = db.execute(
         select(PermissionModel)
         .where(PermissionModel.id == permission_id)
@@ -33,7 +33,7 @@ def add_permission_to_role(
 ) -> None:
     role = get_role_by_id(db, role_id)
 
-    permission = get_permissions_by_id(db, permission_id)
+    permission = get_permission_by_id(db, permission_id)
 
     if role.is_system:
         raise SystemRoleModificationError(

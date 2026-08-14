@@ -6,6 +6,7 @@ from app.deps import require_permission
 from app.rbac import service
 from app.rbac.exceptions import (
     RoleAlreadyExistsError,
+    RoleInUseError,
     RoleNotFoundError,
     SystemRoleModificationError,
 )
@@ -132,7 +133,7 @@ def update_role(
     "/roles/{role_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(
-        require_permission(Permissions.ROLES_MANAGE)
+        require_permission(Permissions.ROLES_DELETE)
     )],
 )
 def delete_role(
@@ -150,4 +151,9 @@ def delete_role(
         raise HTTPException(
             status_code=400,
             detail=str(exc)
+        )
+    except RoleInUseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
         )

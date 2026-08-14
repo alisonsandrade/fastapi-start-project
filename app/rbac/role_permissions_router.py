@@ -24,12 +24,12 @@ from app.rbac.schemas import PermissionResponseSchema
 
 router = APIRouter(
     prefix="/admin/roles",
-    tags=["Role Permissions"]
+    tags=["RBAC"],
 )
 
 
 @router.get(
-    "/{roles_id}/permissions",
+    "/{role_id}/permissions",
     response_model=list[PermissionResponseSchema],
     dependencies=[Depends(
         require_permission(Permissions.ROLES_MANAGE)

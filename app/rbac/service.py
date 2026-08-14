@@ -1,12 +1,15 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.rbac.exceptions import (
     RoleAlreadyExistsError,
+    RoleInUseError,
     RoleNotFoundError,
     SystemRoleModificationError,
 )
 from app.rbac.models import PermissionModel, RoleModel
+from app.users.models import UserModel
+from app.users.service import get_user_by_id
 
 
 def list_roles(db: Session) -> list[RoleModel]:
@@ -91,6 +94,23 @@ def update_role(
     return role
 
 
+def change_user_role(
+    db: Session,
+    user_id: str,
+    role_id: str,
+) -> UserModel:
+    user = get_user_by_id(db, user_id)
+
+    role = get_role_by_id(db, role_id)
+
+    user.role_id = role.id
+
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
 def delete_role(
     db: Session,
     role_id: str,
@@ -99,6 +119,16 @@ def delete_role(
 
     if role.is_system:
         raise SystemRoleModificationError("System roles cannot be modified.")
+
+    users_count = db.scalar(
+        select(func.count()).select_from(UserModel)
+        .where(UserModel.role_id == role.id)
+    )
+
+    if users_count and users_count > 0:
+        raise RoleInUseError(
+            f"Role is assigned to {users_count} users and cannot be deleted."
+        )
 
     db.delete(role)
     db.commit()
