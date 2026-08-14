@@ -54,3 +54,62 @@ def test_admin_allowed_on_admin_list(client, admin_headers):
 def test_unauthenticated_gets_401(client):
     response = client.get(f"{API_PREFIX}/admin/users/")
     assert response.status_code == 401
+
+
+def test_admin_can_create_role(
+    client,
+    admin_headers,
+):
+    response = client.post(
+        f"{API_PREFIX}/admin/roles",
+        headers=admin_headers,
+        json={
+            "name": "coordinator",
+            "description": "Regional coordinator",
+        },
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert data["name"] == "coordinator"
+    assert data["is_system"] is False
+
+
+def test_member_cannot_create_role(
+    client,
+    auth_headers,
+):
+    response = client.post(
+        f"{API_PREFIX}/admin/roles",
+        headers=auth_headers,
+        json={
+            "name": "coordinator",
+        },
+    )
+
+    assert response.status_code == 403
+
+
+def test_duplicate_role_returns_409(
+    client,
+    admin_headers,
+):
+    client.post(
+        f"{API_PREFIX}/admin/roles",
+        headers=admin_headers,
+        json={
+            "name": "coordinator",
+        },
+    )
+
+    response = client.post(
+        f"{API_PREFIX}/admin/roles",
+        headers=admin_headers,
+        json={
+            "name": "coordinator",
+        },
+    )
+
+    assert response.status_code == 409
