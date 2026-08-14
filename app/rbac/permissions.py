@@ -7,6 +7,8 @@ class Permissions:
     USERS_DELETE = "users.delete"
     USERS_LIST = "users.list"
 
+    ROLES_MANAGE = "roles.manage"
+
 
 ALL_PERMISSIONS: list[tuple[str, str]] = [
     (Permissions.USERS_CREATE, "Criar usuários"),
@@ -14,6 +16,7 @@ ALL_PERMISSIONS: list[tuple[str, str]] = [
     (Permissions.USERS_UPDATE, "Atualizar usuários"),
     (Permissions.USERS_DELETE, "Excluir usuários"),
     (Permissions.USERS_LIST, "Listar usuários"),
+    (Permissions.ROLES_MANAGE, "Gerenciar roles e permissões"),
 ]
 
 BUILTIN_ROLES: dict[str, dict] = {

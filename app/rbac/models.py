@@ -51,6 +51,14 @@ class RoleModel(Base):
         cascade="all, delete-orphan",
     )
 
+    @property
+    def permission_items(self) -> list["PermissionModel"]:
+        return [rp.permission for rp in self.permissions]
+
+    @property
+    def permission_count(self) -> int:
+        return len(self.permissions)
+
 
 class RolePermissionModel(Base):
     """Associação N:N entre roles e permissions"""

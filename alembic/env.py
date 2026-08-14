@@ -10,6 +10,7 @@ from app.core.database import Base
 from app.users import models as user_models
 from app.auth import models as auth_models
 from app.audit import models as audit_models
+from app.rbac import models as rbac_models
 
 from app.core.config import get_settings
 
