@@ -28,27 +28,6 @@ router = APIRouter(
 )
 
 
-@router.get(
-    "/{role_id}/permissions",
-    response_model=list[PermissionResponseSchema],
-    dependencies=[Depends(
-        require_permission(Permissions.ROLES_MANAGE)
-    )],
-    summary="List role permissions.",
-)
-def get_role_permissions(
-    role_id: str,
-    db: Annotated[Session, Depends(get_db)],
-):
-    try:
-        return list_role_permissions(db, role_id)
-    except RoleNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        )
-
-
 @router.post(
     "/{role_id}/permissions/{permission_id}",
     dependencies=[

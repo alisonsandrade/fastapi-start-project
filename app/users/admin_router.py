@@ -20,10 +20,10 @@ from app.users.exceptions import (
     UserNotFoundError,
 )
 from app.users.schemas import (
+    AdminUserResponseSchema,
     UserAdminCreateSchema,
     UserAdminUpdateSchema,
     UserListResponseSchema,
-    UserRBACSchema,
     UserResponseSchema,
 )
 
@@ -77,7 +77,7 @@ def create_user_by_admin(
     "/",
     dependencies=[Depends(require_permission(Permissions.USERS_LIST))],
     response_model=UserListResponseSchema,
-    summary="List users (ADMIN)",
+    summary="List all users",
 )
 def list_users(
     db: Annotated[Session, Depends(get_db)],
@@ -113,30 +113,36 @@ def list_users(
     )
 
     return UserListResponseSchema(
+        items=[
+            AdminUserResponseSchema.model_validate(item) for item in items
+        ],
         total=total,
         skip=skip,
         limit=limit,
-        items=[
-            UserResponseSchema.model_validate({
-                "id": item.id,
-                "name": item.name,
-                "email": item.email,
-                "phone": item.phone,
-                "avatar_url": item.avatar_url,
-                "job_title": item.job_title,
-                "bio": item.bio,
-                "is_active": item.is_active,
-                "role": item.role.name,
-                "permissions": [
-                    rp.permission.code
-                    for rp in item.role.permissions
-                ],
-                "created_at": item.created_at,
-                "updated_at": item.updated_at,
-            })
-            for item in items
-        ],
     )
+
+
+@router.get(
+    "/{user_id}",
+    dependencies=[Depends(
+        require_permission(Permissions.USERS_READ)
+    )],
+    response_model=AdminUserResponseSchema,
+    summary="Get user by id"
+)
+def get_user_by_id(
+    user_id: str,
+    db: Annotated[Session, Depends(get_db)],
+) -> UserResponseSchema:
+    try:
+        user = service.get_user_by_id(db, user_id)
+    except UserNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        )
+
+    return AdminUserResponseSchema.model_validate(user)
 
 
 @router.patch(
@@ -187,7 +193,7 @@ def soft_delete_user_by_admin(
     db: Annotated[Session, Depends(get_db)],
     admin: CurrentAdmin
 ):
-    user = service.get_user_by_id(db, user_id)
+    user = service.get_user_by_id(db, str(user_id))
 
     if str(user.id) == str(admin.id):
         raise HTTPException(
@@ -234,36 +240,6 @@ def hard_delete_user_by_admin(
 "------------------------------------------------------------------------------"
 
 
-@router.get(
-    "/{user_id}/rbac",
-    dependencies=[Depends(
-        require_permission(Permissions.ROLES_MANAGE)
-    )],
-    response_model=UserRBACSchema,
-    summary="Get user role and permissions"
-)
-def get_user_rbac(
-    user_id: str,
-    db: Annotated[Session, Depends(get_db)],
-) -> UserRBACSchema:
-    try:
-        user = service.get_user_rbac(db, user_id)
-    except UserNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        )
-
-    return UserRBACSchema(
-        user_id=str(user.id),
-        user_name=user.name,
-        role_id=str(user.role.id),
-        role_name=user.role.name,
-        permissions=[
-            rp.permission.code
-            for rp in user.role.permissions
-        ],
-    )
 
 
 @router.patch(

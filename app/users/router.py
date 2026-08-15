@@ -53,23 +53,7 @@ def register(
 def get_current_user_profile(
     current_user: CurrentUser,
 ) -> UserResponseSchema:
-    return UserResponseSchema.model_validate({
-        "id": current_user.id,
-        "name": current_user.name,
-        "email": current_user.email,
-        "phone": current_user.phone,
-        "avatar_url": current_user.avatar_url,
-        "job_title": current_user.job_title,
-        "bio": current_user.bio,
-        "is_active": current_user.is_active,
-        "role": current_user.role.name,
-        "permissions": [
-            rp.permission.code
-            for rp in current_user.role.permissions
-        ],
-        "created_at": current_user.created_at,
-        "updated_at": current_user.updated_at,
-    })
+    return UserResponseSchema.model_validate(current_user)
 
 
 @router.patch(

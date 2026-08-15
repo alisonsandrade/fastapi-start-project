@@ -207,7 +207,6 @@ class UserResponseSchema(BaseModel):
     bio: str | None = None
     is_active: bool
     role: str = Field(validation_alias="role_name")
-    permissions: list[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime | None = None
 
@@ -230,19 +229,13 @@ class UserResponseSchema(BaseModel):
     )
 
 
+class AdminUserResponseSchema(UserResponseSchema):
+    permissions: list[str] = Field(default_factory=list)
+
+
 class UserListResponseSchema(BaseModel):
     """Schema for paginated user lists."""
-    items: list[UserResponseSchema]
+    items: list[AdminUserResponseSchema]
     total: int
     skip: int
     limit: int
-
-
-class UserRBACSchema(BaseModel):
-    user_id: str
-    user_name: str
-
-    role_id: str
-    role_name: str
-
-    permissions: list[str]

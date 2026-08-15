@@ -112,3 +112,14 @@ class UserModel(Base):
             rp.permission.code == code
             for rp in self.role.permissions
         )
+
+    @property
+    def permissions(self) -> list[str]:
+        return [
+            rp.permission.code
+            for rp in self.role.permissions
+        ]
+
+    @property
+    def permission_count(self) -> int:
+        return len(self.permissions)
